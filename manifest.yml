@@ -1,0 +1,8 @@
+---
+applications:
+- name: nats-sub
+  buildpack: ruby_buildpack
+  env:
+    NATS_USER: nats
+    NATS_PASS: <PASSWORD>
+
