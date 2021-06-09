@@ -8,6 +8,7 @@ ROLE = ENV['ROLE']
 CLIENT_CERT_PATH = "#{Dir.pwd}/certs/client.crt"
 CLIENT_KEY_PATH = "#{Dir.pwd}/certs/client.key"
 CA_PATH = "#{Dir.pwd}/certs/ca.crt"
+MESSAGE_PUBLISH_DELAY = 0.2 #seconds
 
 subscription_ids = []
 
@@ -44,6 +45,15 @@ def build_nats_options(host, port, subject)
   options
 end
 
+def publish_messages(nats, subject, message, count)
+  nats.flush do
+    for c in 0..count do
+      nats.publish(subject, "#{message} count: #{c}")
+      sleep(MESSAGE_PUBLISH_DELAY)
+    end
+  end
+end
+
 get '/hello' do
   puts 'hi'
   STDERR.puts 'hello'
@@ -52,14 +62,12 @@ end
 
 case ROLE
 when 'pub', 'publish', 'PUB', 'PUBLISH'
-  get '/publish/:host/:port/:subject' do |host, port, subject|
+  get '/publish/:host/:port/:subject/:message/:count' do |host, port, subject, message, count|
     options = build_nats_options(host, port, subject)
     NATS.start(options) do |nats|
       STDERR.puts "Publish: Connected to NATS at #{nats.connected_server}"
-      nats.flush do
-        nats.publish(subject, 'meow')
-        STDERR.puts 'publishing!'
-      end
+      publish_messages(nats, subject, message, count.to_i)
+      STDERR.puts 'published!'
     end
   end
 
@@ -95,4 +103,3 @@ get '/disconnect' do
   NATS.stop
   STDERR.puts "disconnected"
 end
-
